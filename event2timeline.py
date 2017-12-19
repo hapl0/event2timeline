@@ -17,6 +17,7 @@ import datetime
 import calendar
 import mmap
 import contextlib
+import json
 from dateutil.parser import parse
 from Evtx.Evtx import FileHeader
 from Evtx.Views import evtx_file_xml_view
@@ -178,7 +179,9 @@ def sessions2timeline(sessions):
 			user_sessions[s['username']][sid] = s
 			
 		print "[*] Unique users: %s" % len(user_sessions)
-				
+                if len(user_sessions) == 0:
+                    print "Exiting..."
+                    return 2
 		lanes = [u for u in user_sessions]
 
 		items = []
@@ -262,19 +265,20 @@ if __name__ == '__main__':
 		Parser.error("You must specify a file format format (csv or xml)")
 
 	timeline = sessions2timeline(sessions)
+        if timeline == 2:
+            exit(2)
 
 	print "[*] Mapped %s sessions from %s to %s" % (len(timeline['items']), timeline['time_begin'], timeline['time_end'])
 
-
 	js = open('timeline/evtdata.js','w+')
 
-	js.write("var lanes = %s,\n" % str(timeline['lanes']))
+	js.write("var lanes = %s,\n" % str(list(x.encode('utf-8') for x in timeline['lanes'])))
 	js.write("laneLength = lanes.length,\n")
-	js.write("items = %s,\n" % timeline['items'])
-	js.write("timeBegin = \'%s\',\n" % timeline['time_begin'])
+	js.write("items = ")
+        json.dump(timeline['items'],js)
+	js.write(",\ntimeBegin = \'%s\',\n" % timeline['time_begin'])
 	js.write("timeEnd = \'%s\',\n" % timeline['time_end'])
 	js.write("filename = \'%s\';\n" % options.eventlogfile)
-
 
 	js.close()
 
